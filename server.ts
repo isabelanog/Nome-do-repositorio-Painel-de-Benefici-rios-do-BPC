@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import middie from '@fastify/middie';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
+import type { IncomingMessage, ServerResponse } from 'http';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { initDatabase } from './server/db.js';
@@ -39,7 +40,11 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: 'spa',
     });
-    fastify.use(vite.middlewares);
+    // Rotas /api seguem para o Fastify; o fallback SPA do Vite devolveria index.html
+    fastify.use((req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => {
+      if (req.url?.startsWith('/api')) return next();
+      vite.middlewares(req, res, next);
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     await fastify.register(fastifyStatic, {
